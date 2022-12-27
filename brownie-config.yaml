@@ -10,10 +10,7 @@ compiler:
 dotenv: .env
 networks:
   default: development
-#  ginache-fork:
-#    NaughtCoin_address: '0xc8ea78065e321B4AaB623b592DC165AaAcEFDb18'
-#    verify: False
-#  rinkeby:
+#  goerly:
 #    eth_usd_price_feed: '0x8A753747A1Fa494EC906cE90E9f37563A8AF630e'
 #    fallBack_address: '0xbCE7Be354234462D661744Ae3106aB3BdEe01f84'
 #    fallOut_address: '0xD5DF1b700250e5D6e9AB75B5973695EdD929ef3F'
@@ -32,24 +29,22 @@ networks:
 #    GatekeeperTwo_address: '0x189A08C4b472aF66437eF1d0D7193AB8924faF8f'
 #    NaughtCoin_address: '0xc8ea78065e321B4AaB623b592DC165AaAcEFDb18'
 #    verify: True
-#  rinkeby-fork-dev:
-#    TokenThing_address: '0xF82c38FFC4fb6f4e5Dd79ff84154d8454613eA7D'
-#    TokenThing_fork_wallet: '0x4a0fd3a7131a90692c72549453C397d8B4686954' # This is just for testing unlocking accounts via fork
-#    TokenThing_deployer: '0x63bE8347A617476CA461649897238A31835a32CE'
-#    Delegation_address: '0x94A87Eb2e6121eC3134920df2cce2B209A4Ec874'
-#    Elevator_address: '0xb3a5BBc716d5f687d2e236d4Fb1dbb66A1bB2fAA'
-#    Privacy_address: '0x74b39548ACCe2f61ba518389b720C8Ab94A9a5a3'
-#    GatekeeperOne_address: '0x94acEac08E1eF43E4A255755a45d39bc6482d643'
-#    GatekeeperTwo_address: '0x189A08C4b472aF66437eF1d0D7193AB8924faF8f'
-#    NaughtCoin_address: '0xc8ea78065e321B4AaB623b592DC165AaAcEFDb18'
-#    verify: False
-#  mainnet-fork-dev:
-#    eth_usd_price_feed: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'
-#    verify: False
   development:
     verify: False
   ganache-local:
     verify: False
+  goerli:
+    host: https://goerli.infura.io/v3/${WEB3_INFURA_PROJECT_ID}
+    coin_flip_address: '0xEfF14c6641E89828896591F04Bd15F4F2Da4C8D7'
+    telephone_address: '0xd1C24484ee700D94eD81A6201c3e39aBd21b8190'
+    token_thing_address: '0xFE5072e945Eef23C35C37a1007A71b6C3810d0c1'
+    token_thing_deployer: '0xEf9307fD512C94483A2D672B2306D6751643aF64'
+    delegation_address: '0x3A0977753e6D7Ab9CeA61F1E517c5B1280b0dE83'
+    force_address: '0x269431377Fc09972B95aF7fFDF613b565d9aBB93'
+    vault_address: '0x17bbe11b75Bcf406BD9fD69926905c9B663530a1'
+    King_address: '0x8E1211cC38eE55eD7c69B7206AB27Bfcd538AC02'
+    Reentrance_address: '0x9AC231885c5f625fA5bD9EaD67312973a4f350B8'
+    Elevator_address: '0x7cB856b42cA04c6d5A1081678cFc613919Ae0af6'
 wallets:
   from_key: ${PRIVATE_KEY}
 settings:

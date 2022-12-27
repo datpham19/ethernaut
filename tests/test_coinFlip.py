@@ -1,4 +1,4 @@
-from scripts.helpful_scripts import *
+from scripts.interface import *
 from scripts.deploy import *
 
 def test_coinFlip():
@@ -6,7 +6,7 @@ def test_coinFlip():
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         coinFlip = CoinFlip.deploy({"from": account}, publish_source=False)
     else:
-        coinFlipAddress = config["networks"][network.show_active()]["coinFlip_address"]
+        coinFlipAddress = config["networks"][network.show_active()]["coin_flip_address"]
         coinFlip = Contract.from_abi("CoinFlip", coinFlipAddress, CoinFlip.abi)
 
     attacker = CoinFlipAttacker.deploy(coinFlip.address, {"from": account}, publish_source=False)
